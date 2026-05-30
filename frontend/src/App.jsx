@@ -16,7 +16,7 @@ function App() {
     iframeRef.current?.contentWindow?.postMessage({ type: "user_msg", text: userMsg }, "*")
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/chat", {
+      const res = await fetch("https://sona-backend-oqid.onrender.com/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userMsg })
@@ -24,7 +24,7 @@ function App() {
       const data = await res.json()
       setMessages(prev => [...prev, { role: "sona", text: data.reply }])
       iframeRef.current?.contentWindow?.postMessage({ type: "sona_reply", text: data.reply }, "*")
-      const audio = new Audio(`http://127.0.0.1:8000${data.audio}`)
+      const audio = new Audio(`https://sona-backend-oqid.onrender.com${data.audio}`)
       audio.play()
     } catch {
       setMessages(prev => [...prev, { role: "sona", text: "Backend se connect nahi ho paya!" }])
