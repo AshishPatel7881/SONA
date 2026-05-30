@@ -47,7 +47,7 @@ async def chat(msg: Message):
     filename = f"audio_{uuid.uuid4().hex}.mp3"
     filepath = f"audio/{filename}"
     os.makedirs("audio", exist_ok=True)
-    tts = gTTS(text=reply, lang="en", slow=False)
+    tts = gTTS(text=reply, lang="hi", slow=False)
     tts.save(filepath)
 
     return {"reply": reply, "audio": f"/audio/{filename}"}

@@ -36,7 +36,7 @@ function App() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SR) return alert("Chrome use karo!")
     const r = new SR()
-    r.lang = "en-US"
+    r.lang = "hi-IN"
     r.onstart = () => setListening(true)
     r.onend = () => setListening(false)
     r.onresult = (e) => sendMessage(e.results[0][0].transcript)
