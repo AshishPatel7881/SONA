@@ -1,0 +1,799 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#000;min-height:100vh;font-family:'Rajdhani',sans-serif;color:#00f0ff;overflow-x:hidden;}
+  .bg-grid{position:fixed;top:0;left:0;right:0;bottom:0;background-image:linear-gradient(rgba(0,240,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,0.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  .scanline{position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(to bottom,transparent 0px,transparent 3px,rgba(0,0,0,0.12) 3px,rgba(0,0,0,0.12) 4px);pointer-events:none;z-index:999;}
+  .container{position:relative;z-index:1;max-width:680px;margin:0 auto;padding:18px 16px;}
+
+  .header{text-align:center;margin-bottom:16px;}
+  .brand{font-family:'Orbitron',monospace;font-size:9px;letter-spacing:6px;color:rgba(0,240,255,0.45);text-transform:uppercase;margin-bottom:4px;}
+  .sona-title{font-family:'Orbitron',monospace;font-size:48px;font-weight:900;letter-spacing:14px;color:#00f0ff;text-shadow:0 0 30px rgba(0,240,255,0.6),0 0 80px rgba(0,240,255,0.2);position:relative;display:inline-block;}
+  .sona-title::before{content:'SONA';position:absolute;top:0;left:0;color:#ff003c;clip-path:polygon(0 0,100% 0,100% 35%,0 35%);animation:glitch 4s infinite;letter-spacing:14px;}
+  @keyframes glitch{0%,92%,100%{transform:translate(0);opacity:0;}93%{transform:translate(-3px,1px);opacity:0.8;}95%{transform:translate(3px,-1px);opacity:0.8;}97%{transform:translate(-2px,0);opacity:0.8;}99%{transform:translate(0);opacity:0;}}
+  .subtitle{font-size:12px;letter-spacing:4px;color:rgba(0,240,255,0.4);margin-top:4px;text-transform:uppercase;}
+  .creator-tag{font-size:10px;letter-spacing:2px;color:rgba(255,0,60,0.55);margin-top:2px;}
+
+  /* ===== MAIN AI AVATAR CANVAS AREA ===== */
+  .hud-area{display:flex;justify-content:center;align-items:center;position:relative;height:280px;margin-bottom:14px;}
+  .rings-svg{position:absolute;top:50%;left:50%;pointer-events:none;}
+  .ring-outer{animation:spin-slow 9s linear infinite;}
+  .ring-mid{animation:spin-slow 5s linear infinite reverse;}
+  .ring-inner{animation:spin-slow 3.5s linear infinite;}
+  @keyframes spin-slow{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+  .avatar-canvas-wrap{position:relative;z-index:10;width:180px;height:180px;}
+  canvas#avatarCanvas{border-radius:50%;display:block;box-shadow:0 0 0 2px rgba(0,240,255,0.45),0 0 50px rgba(0,240,255,0.3);}
+
+  /* emotion tag */
+  .emotion-tag{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;background:rgba(0,0,0,0.9);border:0.5px solid rgba(0,240,255,0.4);padding:3px 10px;border-radius:3px;color:#00f0ff;white-space:nowrap;z-index:20;}
+
+  /* ml data panel */
+  .ml-panel{position:absolute;right:-130px;top:50%;transform:translateY(-50%);width:118px;font-family:'Orbitron',monospace;font-size:8px;}
+  .ml-row{margin-bottom:7px;}
+  .ml-label{color:rgba(0,240,255,0.4);letter-spacing:1px;margin-bottom:2px;font-size:7px;}
+  .ml-bar-bg{background:rgba(0,240,255,0.08);border:0.5px solid rgba(0,240,255,0.15);border-radius:2px;height:6px;overflow:hidden;}
+  .ml-bar-fill{height:6px;border-radius:2px;transition:width 0.6s ease;}
+  .ml-val{color:rgba(0,240,255,0.7);font-size:7px;margin-top:1px;text-align:right;}
+
+  .ai-panel{position:absolute;left:-130px;top:50%;transform:translateY(-50%);width:118px;font-family:'Orbitron',monospace;font-size:7px;}
+  .ai-stat{margin-bottom:8px;color:rgba(0,240,255,0.5);letter-spacing:1px;}
+  .ai-stat span{display:block;color:#00f0ff;font-size:9px;margin-top:1px;}
+  .ai-stat .pulse-val{animation:val-pulse 2s infinite;}
+  @keyframes val-pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+
+  .hud-corner{position:absolute;font-family:'Orbitron',monospace;font-size:7px;letter-spacing:1px;color:rgba(0,240,255,0.28);}
+  .hud-tl{top:8px;left:16px;} .hud-tr{top:8px;right:16px;text-align:right;}
+  .hud-bl{bottom:8px;left:16px;} .hud-br{bottom:8px;right:16px;text-align:right;}
+
+  /* ===== STATUS BAR ===== */
+  .status-bar{display:flex;align-items:center;justify-content:space-between;background:rgba(0,240,255,0.04);border:0.5px solid rgba(0,240,255,0.15);border-radius:4px;padding:8px 14px;margin-bottom:12px;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;}
+  .status-dot{width:6px;height:6px;border-radius:50%;background:#00ff88;box-shadow:0 0 8px #00ff88;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+  .status-text{color:rgba(0,240,255,0.7);}
+  .status-mode{color:#ff003c;}
+
+  /* ===== NEURAL NET VIZ ===== */
+  .neural-bar{margin-bottom:12px;}
+  canvas#neuralCanvas{width:100%;border:0.5px solid rgba(0,240,255,0.1);border-radius:4px;background:rgba(0,6,20,0.8);display:block;}
+
+  /* ===== CHAT ===== */
+  .chat-window{background:rgba(0,6,20,0.8);border:0.5px solid rgba(0,240,255,0.18);border-radius:6px;padding:12px;margin-bottom:12px;min-height:160px;max-height:200px;overflow-y:auto;position:relative;}
+  .chat-window::before{content:'CONVERSATION LOG';position:absolute;top:7px;right:11px;font-family:'Orbitron',monospace;font-size:7px;letter-spacing:2px;color:rgba(0,240,255,0.16);}
+  .msg{margin-bottom:10px;font-size:14px;line-height:1.5;}
+  .msg-sona{color:#00f0ff;padding-left:10px;border-left:2px solid rgba(0,240,255,0.4);}
+  .msg-user{color:rgba(255,255,255,0.7);padding-right:10px;border-right:2px solid rgba(255,0,60,0.4);text-align:right;}
+  .msg-label{font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:rgba(0,240,255,0.38);margin-bottom:2px;}
+  .msg-user .msg-label{color:rgba(255,0,60,0.45);}
+  .typing-indicator{display:inline-flex;gap:4px;align-items:center;padding:3px 0;}
+  .typing-dot{width:5px;height:5px;border-radius:50%;background:#00f0ff;animation:typing-bounce 1.2s infinite;}
+  .typing-dot:nth-child(2){animation-delay:0.2s;}.typing-dot:nth-child(3){animation-delay:0.4s;}
+  @keyframes typing-bounce{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-5px);opacity:1;}}
+
+  /* ===== INPUT ===== */
+  .input-row{display:flex;gap:8px;margin-bottom:12px;}
+  .cmd-input{flex:1;background:rgba(0,240,255,0.05);border:0.5px solid rgba(0,240,255,0.25);border-radius:4px;color:#00f0ff;font-family:'Rajdhani',sans-serif;font-size:15px;padding:9px 12px;outline:none;letter-spacing:1px;}
+  .cmd-input::placeholder{color:rgba(0,240,255,0.25);}
+  .cmd-input:focus{border-color:rgba(0,240,255,0.6);background:rgba(0,240,255,0.08);}
+  .send-btn{background:rgba(0,240,255,0.1);border:0.5px solid rgba(0,240,255,0.4);border-radius:4px;color:#00f0ff;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:1px;padding:9px 14px;cursor:pointer;transition:all 0.2s;}
+  .send-btn:hover{background:rgba(0,240,255,0.2);}
+
+  /* ===== MIC ===== */
+  .mic-section{display:flex;flex-direction:column;align-items:center;gap:7px;margin-bottom:16px;}
+  .mic-wrapper{position:relative;width:66px;height:66px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .mic-ring{position:absolute;border-radius:50%;border:1px solid rgba(0,240,255,0.22);animation:mic-expand 2s infinite;}
+  .mic-ring:nth-child(1){width:66px;height:66px;animation-delay:0s;}
+  .mic-ring:nth-child(2){width:50px;height:50px;animation-delay:0.3s;}
+  .mic-ring:nth-child(3){width:36px;height:36px;animation-delay:0.6s;}
+  .mic-ring.active{border-color:rgba(255,0,60,0.7);animation:mic-expand-active 0.8s infinite;}
+  @keyframes mic-expand{0%{opacity:0.6;transform:scale(0.95);}50%{opacity:0.2;transform:scale(1);}100%{opacity:0.6;transform:scale(0.95);}}
+  @keyframes mic-expand-active{0%{opacity:1;transform:scale(0.9);}50%{opacity:0.3;transform:scale(1.1);}100%{opacity:1;transform:scale(0.9);}}
+  .mic-btn{position:relative;z-index:2;width:44px;height:44px;border-radius:50%;background:rgba(0,6,20,0.9);border:1.5px solid rgba(0,240,255,0.5);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;}
+  .mic-btn.listening{border-color:#ff003c;background:rgba(255,0,60,0.08);box-shadow:0 0 20px rgba(255,0,60,0.3);}
+  .mic-svg{width:18px;height:18px;fill:#00f0ff;transition:fill 0.2s;}
+  .mic-btn.listening .mic-svg{fill:#ff003c;}
+  .mic-label{font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:rgba(0,240,255,0.38);}
+  .waveform{display:flex;gap:3px;align-items:center;height:18px;}
+  .wave-bar{width:3px;background:rgba(0,240,255,0.4);border-radius:2px;animation:wave 1.5s infinite;}
+  .wave-bar:nth-child(1){animation-delay:0s;height:6px;}.wave-bar:nth-child(2){animation-delay:0.1s;height:12px;}.wave-bar:nth-child(3){animation-delay:0.2s;height:16px;}.wave-bar:nth-child(4){animation-delay:0.3s;height:12px;}.wave-bar:nth-child(5){animation-delay:0.4s;height:8px;}.wave-bar:nth-child(6){animation-delay:0.5s;height:13px;}.wave-bar:nth-child(7){animation-delay:0.6s;height:6px;}
+  .waveform.idle .wave-bar{animation:none;height:4px;opacity:0.3;}
+  @keyframes wave{0%,100%{transform:scaleY(0.4);opacity:0.5;}50%{transform:scaleY(1);opacity:1;}}
+
+  /* ===== COMMANDS ===== */
+  .commands-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:14px;}
+  .cmd-chip{background:rgba(0,240,255,0.05);border:0.5px solid rgba(0,240,255,0.13);border-radius:4px;padding:8px;cursor:pointer;transition:all 0.15s;text-align:center;}
+  .cmd-chip:hover{background:rgba(0,240,255,0.12);border-color:rgba(0,240,255,0.35);}
+  .cmd-chip-icon{font-size:16px;display:block;margin-bottom:3px;}
+  .cmd-chip-text{font-size:11px;color:rgba(0,240,255,0.7);letter-spacing:0.5px;}
+  .feature-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px;}
+  .feature-cell{background:rgba(0,240,255,0.03);border:0.5px solid rgba(0,240,255,0.09);border-radius:4px;padding:8px 5px;text-align:center;}
+  .feature-icon{font-size:17px;display:block;margin-bottom:3px;}
+  .feature-name{font-family:'Orbitron',monospace;font-size:7px;letter-spacing:1px;color:rgba(0,240,255,0.35);text-transform:uppercase;}
+  .bottom-strip{display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:0.5px solid rgba(0,240,255,0.1);font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:rgba(0,240,255,0.2);}
+  ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:rgba(0,240,255,0.2);border-radius:2px;}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="scanline"></div>
+<div class="container">
+
+  <div class="header">
+    <div class="brand">Artificial Neural Oracle Assistant</div>
+    <div class="sona-title">SONA</div>
+    <div class="subtitle">AI · ML · Voice · Intelligence</div>
+    <div class="creator-tag">// Created by Ashish Patel</div>
+  </div>
+
+  <!-- HUD AREA -->
+  <div class="hud-area">
+    <div class="hud-corner hud-tl">NEURAL<br>CORE v1.0</div>
+    <div class="hud-corner hud-tr">ML MODEL<br>ACTIVE</div>
+    <div class="hud-corner hud-bl">VOICE<br>READY</div>
+    <div class="hud-corner hud-br">HINDI<br>+ EN</div>
+
+    <!-- AI Stats Left Panel -->
+    <div class="ai-panel">
+      <div class="ai-stat">AI CONFIDENCE<span class="pulse-val" id="aiConf">97.4%</span></div>
+      <div class="ai-stat">EMOTION STATE<span id="emotionState">NEUTRAL</span></div>
+      <div class="ai-stat">TOKENS/SEC<span class="pulse-val" id="tokensPS">142</span></div>
+      <div class="ai-stat">NEURAL DEPTH<span>12 LAYERS</span></div>
+      <div class="ai-stat">VOICE PITCH<span class="pulse-val" id="pitchVal">220 Hz</span></div>
+    </div>
+
+    <!-- ML Bars Right Panel -->
+    <div class="ml-panel">
+      <div class="ml-row">
+        <div class="ml-label">INTENT MATCH</div>
+        <div class="ml-bar-bg"><div class="ml-bar-fill" id="b1" style="width:92%;background:#00f0ff;"></div></div>
+        <div class="ml-val" id="v1">92%</div>
+      </div>
+      <div class="ml-row">
+        <div class="ml-label">SENTIMENT</div>
+        <div class="ml-bar-bg"><div class="ml-bar-fill" id="b2" style="width:78%;background:#00ff88;"></div></div>
+        <div class="ml-val" id="v2">78%</div>
+      </div>
+      <div class="ml-row">
+        <div class="ml-label">VOICE CONF.</div>
+        <div class="ml-bar-bg"><div class="ml-bar-fill" id="b3" style="width:85%;background:#ff003c;"></div></div>
+        <div class="ml-val" id="v3">85%</div>
+      </div>
+      <div class="ml-row">
+        <div class="ml-label">CONTEXT MEM</div>
+        <div class="ml-bar-bg"><div class="ml-bar-fill" id="b4" style="width:60%;background:#ff9900;"></div></div>
+        <div class="ml-val" id="v4">60%</div>
+      </div>
+      <div class="ml-row">
+        <div class="ml-label">CREATIVITY</div>
+        <div class="ml-bar-bg"><div class="ml-bar-fill" id="b5" style="width:70%;background:#aa00ff;"></div></div>
+        <div class="ml-val" id="v5">70%</div>
+      </div>
+    </div>
+
+    <!-- Outer ring -->
+    <svg class="rings-svg ring-outer" width="260" height="260" viewBox="0 0 260 260" style="transform:translate(-50%,-50%)">
+      <circle cx="130" cy="130" r="125" fill="none" stroke="rgba(0,240,255,0.12)" stroke-width="1" stroke-dasharray="8 6"/>
+      <circle cx="130" cy="130" r="125" fill="none" stroke="rgba(0,240,255,0.38)" stroke-width="1.5" stroke-dasharray="3 60" stroke-linecap="round"/>
+    </svg>
+    <svg class="rings-svg ring-mid" width="218" height="218" viewBox="0 0 218 218" style="transform:translate(-50%,-50%)">
+      <circle cx="109" cy="109" r="105" fill="none" stroke="rgba(255,0,60,0.16)" stroke-width="1" stroke-dasharray="5 8"/>
+      <circle cx="109" cy="109" r="105" fill="none" stroke="rgba(255,0,60,0.45)" stroke-width="1" stroke-dasharray="2 40" stroke-linecap="round"/>
+    </svg>
+    <svg class="rings-svg ring-inner" width="196" height="196" viewBox="0 0 196 196" style="transform:translate(-50%,-50%)">
+      <circle cx="98" cy="98" r="94" fill="none" stroke="rgba(0,240,255,0.08)" stroke-width="0.5" stroke-dasharray="4 4"/>
+      <circle cx="98" cy="98" r="94" fill="none" stroke="rgba(0,240,255,0.25)" stroke-width="1" stroke-dasharray="20 60" stroke-linecap="round"/>
+    </svg>
+
+    <!-- ANIMATED AI AVATAR CANVAS -->
+    <div class="avatar-canvas-wrap">
+      <canvas id="avatarCanvas" width="180" height="180"></canvas>
+      <div class="emotion-tag" id="emotionTag">😊 NEUTRAL</div>
+    </div>
+  </div>
+
+  <!-- NEURAL NETWORK VISUALIZER -->
+  <div class="neural-bar">
+    <canvas id="neuralCanvas" width="640" height="70"></canvas>
+  </div>
+
+  <div class="status-bar">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="status-dot"></div>
+      <span class="status-text">SYSTEM ONLINE</span>
+    </div>
+    <span class="status-text" id="status-msg">STANDBY</span>
+    <span class="status-mode">HINDI + EN</span>
+  </div>
+
+  <div class="chat-window" id="chat-log">
+    <div class="msg msg-sona"><div class="msg-label">SONA</div><div class="msg-text">Namaste! Main SONA hoon — aapki AI assistant. ML se powered, har sawaal ka jawab dene ke liye taiyaar! 🧠</div></div>
+    <div class="msg msg-user"><div class="msg-label">USER</div><div class="msg-text">SONA, open YouTube</div></div>
+    <div class="msg msg-sona"><div class="msg-label">SONA</div><div class="msg-text">YouTube launch ho raha hai! Intent match: 99.2% ✅</div></div>
+  </div>
+
+  <div class="input-row">
+    <input class="cmd-input" id="user-input" type="text" placeholder='SONA, what is machine learning?' />
+    <button class="send-btn" onclick="sendMessage()">SEND ↗</button>
+  </div>
+
+  <div class="mic-section">
+    <div class="mic-wrapper" onclick="toggleMic()">
+      <div class="mic-ring" id="r1"></div>
+      <div class="mic-ring" id="r2"></div>
+      <div class="mic-ring" id="r3"></div>
+      <div class="mic-btn" id="mic-btn">
+        <svg class="mic-svg" viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v6a2 2 0 0 0 4 0V5a2 2 0 0 0-2-2zm-7 9a7 7 0 0 0 14 0h2a9 9 0 0 1-8 8.945V23h-2v-2.055A9 9 0 0 1 3 12h2z"/></svg>
+      </div>
+    </div>
+    <div class="mic-label" id="mic-label">TAP TO SPEAK — WAKE WORD: "SONA"</div>
+    <div class="waveform idle" id="waveform">
+      <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+    </div>
+  </div>
+
+  <div class="commands-grid">
+    <div class="cmd-chip" onclick="quickCmd('SONA, open Chrome')"><span class="cmd-chip-icon">🌐</span><div class="cmd-chip-text">Open Chrome</div></div>
+    <div class="cmd-chip" onclick="quickCmd('SONA, open YouTube')"><span class="cmd-chip-icon">▶️</span><div class="cmd-chip-text">YouTube</div></div>
+    <div class="cmd-chip" onclick="quickCmd('SONA, open VS Code')"><span class="cmd-chip-icon">💻</span><div class="cmd-chip-text">VS Code</div></div>
+    <div class="cmd-chip" onclick="quickCmd('SONA, play music')"><span class="cmd-chip-icon">🎵</span><div class="cmd-chip-text">Play Music</div></div>
+    <div class="cmd-chip" onclick="quickCmd('SONA, what is machine learning?')"><span class="cmd-chip-icon">🧠</span><div class="cmd-chip-text">Ask ML/AI</div></div>
+    <div class="cmd-chip" onclick="quickCmd('SONA, shutdown PC')"><span class="cmd-chip-icon">⚡</span><div class="cmd-chip-text">Shutdown</div></div>
+  </div>
+
+  <div class="feature-strip">
+    <div class="feature-cell"><span class="feature-icon">🎙️</span><div class="feature-name">Voice STT</div></div>
+    <div class="feature-cell"><span class="feature-icon">🔊</span><div class="feature-name">Hindi TTS</div></div>
+    <div class="feature-cell"><span class="feature-icon">🧠</span><div class="feature-name">OpenAI</div></div>
+    <div class="feature-cell"><span class="feature-icon">📊</span><div class="feature-name">ML Engine</div></div>
+  </div>
+
+  <div class="bottom-strip">
+    <span>SONA v1.0 · PYTHON + REACT · ELECTRON · ML POWERED</span>
+    <span>BY ASHISH PATEL</span>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ANIMATED AI AVATAR — Canvas based, ML-emotion driven
+// ============================================================
+const ac = document.getElementById('avatarCanvas');
+const ctx = ac.getContext('2d');
+const W = 180, H = 180, CX = 90, CY = 90;
+let t = 0;
+
+// ML State (simulated AI/ML values)
+let mlState = {
+  emotion: 'neutral',
+  blinkT: 0,
+  blinkOpen: 1,
+  mouthOpen: 0,
+  mouthTarget: 0,
+  eyeX: 0, eyeY: 0,
+  eyeTargetX: 0, eyeTargetY: 0,
+  glowPulse: 0,
+  particleT: 0,
+  emotionTimer: 0,
+  speaking: false,
+  thinkPulse: 0,
+  dataBits: []
+};
+
+// particles (neural bits floating around)
+for(let i=0;i<18;i++){
+  mlState.dataBits.push({
+    angle: Math.random()*Math.PI*2,
+    r: 65 + Math.random()*18,
+    speed: (Math.random()-0.5)*0.012,
+    size: 1+Math.random()*2,
+    alpha: 0.3+Math.random()*0.5,
+    color: Math.random()>0.5?'#00f0ff':'#ff003c'
+  });
+}
+
+const emotions = [
+  {name:'neutral',  emoji:'😐', eye:'normal', mouth:0.05},
+  {name:'happy',    emoji:'😊', eye:'happy',  mouth:0.22},
+  {name:'thinking', emoji:'🤔', eye:'think',  mouth:0.04},
+  {name:'excited',  emoji:'😄', eye:'wide',   mouth:0.28},
+  {name:'focused',  emoji:'😌', eye:'narrow', mouth:0.02},
+  {name:'curious',  emoji:'🧐', eye:'raise',  mouth:0.08},
+];
+let currentEmotion = emotions[0];
+
+function lerp(a,b,t){return a+(b-a)*t;}
+
+function drawAvatar(){
+  ctx.clearRect(0,0,W,H);
+
+  // --- circular clip ---
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(CX,CY,88,0,Math.PI*2);
+  ctx.clip();
+
+  // Background: deep space gradient
+  let bg = ctx.createRadialGradient(CX,CY-20,10,CX,CY,90);
+  bg.addColorStop(0,'#001830');
+  bg.addColorStop(1,'#000508');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,W,H);
+
+  // Grid lines inside circle
+  ctx.strokeStyle='rgba(0,240,255,0.05)';
+  ctx.lineWidth=0.5;
+  for(let i=0;i<W;i+=18){
+    ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(W,i);ctx.stroke();
+  }
+
+  // Neural bit particles orbiting
+  mlState.dataBits.forEach(b=>{
+    b.angle += b.speed;
+    let px = CX + Math.cos(b.angle)*b.r;
+    let py = CY + Math.sin(b.angle)*b.r;
+    ctx.beginPath();
+    ctx.arc(px,py,b.size,0,Math.PI*2);
+    ctx.fillStyle = b.color.replace(')',`,${b.alpha+(Math.sin(t*2+b.angle)*0.2)})`).replace('rgb','rgba').replace('rgba(0,240,255','rgba(0,240,255').replace('#00f0ff',`rgba(0,240,255,${b.alpha})`).replace('#ff003c',`rgba(255,0,60,${b.alpha})`);
+    ctx.fillStyle = b.color === '#00f0ff' ? `rgba(0,240,255,${b.alpha+Math.sin(t*2+b.angle)*0.2})` : `rgba(255,0,60,${b.alpha+Math.sin(t*2+b.angle)*0.2})`;
+    ctx.fill();
+  });
+
+  // ---- FACE ----
+  // Head base — holographic female silhouette
+  let headGrad = ctx.createRadialGradient(CX-12,CY-25,5,CX,CY-10,52);
+  headGrad.addColorStop(0,'#c8a882');
+  headGrad.addColorStop(0.5,'#a07855');
+  headGrad.addColorStop(1,'#7a5535');
+  ctx.fillStyle=headGrad;
+  ctx.beginPath();
+  ctx.ellipse(CX,CY-8,38,48,0,0,Math.PI*2);
+  ctx.fill();
+
+  // Neck
+  ctx.fillStyle='#a07855';
+  ctx.beginPath();
+  ctx.roundRect(CX-10,CY+35,20,20,4);
+  ctx.fill();
+
+  // Shoulders hint
+  ctx.fillStyle='#e8e8f0';
+  ctx.beginPath();
+  ctx.ellipse(CX,CY+62,55,18,0,0,Math.PI*2);
+  ctx.fill();
+
+  // Hair — long dark hair
+  ctx.fillStyle='#0d0500';
+  // Left hair
+  ctx.beginPath();
+  ctx.moveTo(CX-35,CY-52);
+  ctx.bezierCurveTo(CX-55,CY-20,CX-60,CY+20,CX-48,CY+60);
+  ctx.bezierCurveTo(CX-40,CY+70,CX-28,CY+40,CX-22,CY+35);
+  ctx.bezierCurveTo(CX-30,CY+10,CX-38,CY-20,CX-32,CY-52);
+  ctx.fill();
+  // Right hair
+  ctx.beginPath();
+  ctx.moveTo(CX+35,CY-52);
+  ctx.bezierCurveTo(CX+55,CY-20,CX+60,CY+20,CX+48,CY+60);
+  ctx.bezierCurveTo(CX+40,CY+70,CX+28,CY+40,CX+22,CY+35);
+  ctx.bezierCurveTo(CX+30,CY+10,CX+38,CY-20,CX+32,CY-52);
+  ctx.fill();
+  // Top hair
+  ctx.beginPath();
+  ctx.ellipse(CX,CY-50,36,22,0,0,Math.PI*2);
+  ctx.fill();
+
+  // Hair shine
+  ctx.fillStyle='rgba(60,30,10,0.7)';
+  ctx.beginPath();
+  ctx.ellipse(CX-5,CY-52,14,8,-0.3,0,Math.PI*2);
+  ctx.fill();
+
+  // Glasses frame
+  let eyeBaseY = CY-16;
+  ctx.strokeStyle='#111';
+  ctx.lineWidth=2.5;
+  // left lens
+  ctx.beginPath();
+  ctx.roundRect(CX-32+mlState.eyeX*3,eyeBaseY-8+mlState.eyeY*2,24,16,5);
+  ctx.stroke();
+  ctx.fillStyle='rgba(0,240,255,0.07)';
+  ctx.fill();
+  // right lens
+  ctx.beginPath();
+  ctx.roundRect(CX+8+mlState.eyeX*3,eyeBaseY-8+mlState.eyeY*2,24,16,5);
+  ctx.stroke();
+  ctx.fillStyle='rgba(0,240,255,0.07)';
+  ctx.fill();
+  // bridge
+  ctx.beginPath();
+  ctx.moveTo(CX-8+mlState.eyeX*3,eyeBaseY+mlState.eyeY*2);
+  ctx.lineTo(CX+8+mlState.eyeX*3,eyeBaseY+mlState.eyeY*2);
+  ctx.strokeStyle='#222';
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+
+  // EYES — ML blink + emotion controlled
+  let eyeLY = CY-14+mlState.eyeY*2;
+  let eyeRY = CY-14+mlState.eyeY*2;
+  let eyeLX = CX-20+mlState.eyeX*3;
+  let eyeRX = CX+20+mlState.eyeX*3;
+  let eyeH_base = 6;
+
+  // Emotion eye modifiers
+  let eyeOpenY = eyeH_base * mlState.blinkOpen;
+  if(currentEmotion.eye==='happy') eyeOpenY *= 0.7;
+  if(currentEmotion.eye==='wide') eyeOpenY *= 1.3;
+  if(currentEmotion.eye==='narrow') eyeOpenY *= 0.5;
+  if(currentEmotion.eye==='think') eyeOpenY *= 0.85;
+
+  // Left eye white
+  ctx.fillStyle='white';
+  ctx.beginPath();
+  ctx.ellipse(eyeLX,eyeLY,5,eyeOpenY,0,0,Math.PI*2);
+  ctx.fill();
+  // Right eye white
+  ctx.beginPath();
+  ctx.ellipse(eyeRX,eyeRY,5,eyeOpenY,0,0,Math.PI*2);
+  ctx.fill();
+
+  // Pupils — glowing cyan (AI eyes!)
+  if(mlState.blinkOpen > 0.1){
+    let pupilR = 3.2*mlState.blinkOpen;
+    // left pupil
+    let gradL = ctx.createRadialGradient(eyeLX+mlState.eyeX,eyeLY+mlState.eyeY,0,eyeLX+mlState.eyeX,eyeLY+mlState.eyeY,pupilR);
+    gradL.addColorStop(0,'#ffffff');
+    gradL.addColorStop(0.3,'#00f0ff');
+    gradL.addColorStop(1,'#003344');
+    ctx.fillStyle=gradL;
+    ctx.beginPath();
+    ctx.ellipse(eyeLX+mlState.eyeX,eyeLY+mlState.eyeY,pupilR,pupilR*mlState.blinkOpen,0,0,Math.PI*2);
+    ctx.fill();
+    // right pupil
+    let gradR = ctx.createRadialGradient(eyeRX+mlState.eyeX,eyeRY+mlState.eyeY,0,eyeRX+mlState.eyeX,eyeRY+mlState.eyeY,pupilR);
+    gradR.addColorStop(0,'#ffffff');
+    gradR.addColorStop(0.3,'#00f0ff');
+    gradR.addColorStop(1,'#003344');
+    ctx.fillStyle=gradR;
+    ctx.beginPath();
+    ctx.ellipse(eyeRX+mlState.eyeX,eyeRY+mlState.eyeY,pupilR,pupilR*mlState.blinkOpen,0,0,Math.PI*2);
+    ctx.fill();
+    // Eye glow
+    ctx.shadowBlur=10;ctx.shadowColor='#00f0ff';
+    ctx.beginPath();ctx.arc(eyeLX+mlState.eyeX,eyeLY+mlState.eyeY,1.2,0,Math.PI*2);
+    ctx.fillStyle='#aaffff';ctx.fill();
+    ctx.beginPath();ctx.arc(eyeRX+mlState.eyeX,eyeRY+mlState.eyeY,1.2,0,Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur=0;
+  }
+
+  // Eyebrows
+  ctx.strokeStyle='#1a0a00';ctx.lineWidth=2.2;ctx.lineCap='round';
+  let browY = eyeLY - 9 + (currentEmotion.eye==='raise'?-3:0);
+  let browTilt = currentEmotion.eye==='think'?2:0;
+  ctx.beginPath();ctx.moveTo(eyeLX-5+mlState.eyeX*2,browY+browTilt);ctx.lineTo(eyeLX+5+mlState.eyeX*2,browY-browTilt);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(eyeRX-5+mlState.eyeX*2,browY-browTilt);ctx.lineTo(eyeRX+5+mlState.eyeX*2,browY+browTilt);ctx.stroke();
+
+  // Nose
+  ctx.strokeStyle='rgba(120,70,30,0.5)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(CX,CY-5);ctx.lineTo(CX-4,CY+6);ctx.lineTo(CX+4,CY+6);ctx.stroke();
+
+  // MOUTH — ML emotion driven, speaking animation
+  let mouthY = CY+20;
+  let mOpen = mlState.mouthOpen;
+  ctx.strokeStyle='rgba(160,80,50,0.9)';ctx.lineWidth=1.8;ctx.lineCap='round';
+  if(currentEmotion.name==='happy'||currentEmotion.name==='excited'){
+    ctx.beginPath();
+    ctx.arc(CX,mouthY-2,10,0.2,Math.PI-0.2);
+    ctx.stroke();
+    if(mOpen>0.08){
+      ctx.fillStyle='rgba(80,20,10,0.8)';
+      ctx.beginPath();ctx.ellipse(CX,mouthY+2,8,mOpen*14,0,0,Math.PI);ctx.fill();
+    }
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(CX-9,mouthY);
+    ctx.bezierCurveTo(CX-5,mouthY+mOpen*12,CX+5,mouthY+mOpen*12,CX+9,mouthY);
+    ctx.stroke();
+    if(mOpen>0.04){
+      ctx.fillStyle='rgba(60,10,10,0.7)';
+      ctx.beginPath();ctx.ellipse(CX,mouthY+mOpen*4,7,mOpen*10,0,0,Math.PI);ctx.fill();
+    }
+  }
+
+  // Cheek blush (happy/excited)
+  if(currentEmotion.name==='happy'||currentEmotion.name==='excited'){
+    ctx.fillStyle='rgba(255,100,80,0.12)';
+    ctx.beginPath();ctx.ellipse(CX-22,CY+2,12,7,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(CX+22,CY+2,12,7,0,0,Math.PI*2);ctx.fill();
+  }
+
+  // Holographic overlay circuits on face
+  ctx.strokeStyle='rgba(0,240,255,0.08)';ctx.lineWidth=0.5;
+  [[CX-35,CY-60,CX-55,CY-40],[CX+35,CY-60,CX+55,CY-40]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    ctx.beginPath();ctx.arc(x2,y2,2,0,Math.PI*2);ctx.stroke();
+  });
+
+  // Thinking bubble (ML processing animation)
+  if(currentEmotion.name==='thinking'){
+    mlState.thinkPulse = (mlState.thinkPulse+0.05)%1;
+    for(let i=0;i<4;i++){
+      let ox = CX+28+i*8;
+      let oy = CY-38-i*5;
+      let alpha = (Math.sin(t*3+i)>0)?0.7:0.2;
+      ctx.beginPath();ctx.arc(ox,oy,2+i*0.5,0,Math.PI*2);
+      ctx.fillStyle=`rgba(0,240,255,${alpha})`;ctx.fill();
+    }
+  }
+
+  ctx.restore(); // end clip
+
+  // Outer neon glow ring
+  mlState.glowPulse = Math.sin(t*1.5)*0.5+0.5;
+  let ringAlpha = 0.25+mlState.glowPulse*0.35;
+  ctx.beginPath();ctx.arc(CX,CY,88,0,Math.PI*2);
+  ctx.strokeStyle=`rgba(0,240,255,${ringAlpha})`;ctx.lineWidth=2;ctx.stroke();
+
+  // Scan line
+  let scanY = ((t*30)%176)+2;
+  let sg = ctx.createLinearGradient(0,scanY-4,0,scanY+4);
+  sg.addColorStop(0,'rgba(0,240,255,0)');
+  sg.addColorStop(0.5,'rgba(0,240,255,0.15)');
+  sg.addColorStop(1,'rgba(0,240,255,0)');
+  ctx.fillStyle=sg;
+  // clip to circle for scan
+  ctx.save();ctx.beginPath();ctx.arc(CX,CY,87,0,Math.PI*2);ctx.clip();
+  ctx.fillRect(0,scanY-4,W,8);
+  ctx.restore();
+}
+
+// ============================================================
+// NEURAL NETWORK CANVAS VISUALIZER
+// ============================================================
+const nc = document.getElementById('neuralCanvas');
+const nctx = nc.getContext('2d');
+nc.width = nc.offsetWidth || 640;
+const NW = nc.width, NH = 70;
+nc.height = NH;
+
+const layers = [3,5,5,4,2];
+let nodeActivations = layers.map(n=>Array(n).fill(0));
+let activationT = 0;
+
+function drawNeural(){
+  nctx.clearRect(0,0,NW,NH);
+  nctx.fillStyle='rgba(0,6,20,0)';nctx.fillRect(0,0,NW,NH);
+
+  let totalLayers = layers.length;
+  let xStep = NW/(totalLayers+1);
+  let positions = [];
+
+  layers.forEach((count,li)=>{
+    let lx = xStep*(li+1);
+    let pts = [];
+    for(let ni=0;ni<count;ni++){
+      let ly = NH/2 + (ni-(count-1)/2)*(NH/(count+1));
+      pts.push({x:lx,y:ly,a:nodeActivations[li][ni]});
+    }
+    positions.push(pts);
+  });
+
+  // Draw connections
+  for(let li=0;li<positions.length-1;li++){
+    positions[li].forEach(src=>{
+      positions[li+1].forEach(dst=>{
+        let a = Math.max(src.a,dst.a)*0.5;
+        nctx.beginPath();nctx.moveTo(src.x,src.y);nctx.lineTo(dst.x,dst.y);
+        nctx.strokeStyle=`rgba(0,240,255,${0.06+a*0.25})`;
+        nctx.lineWidth=0.5;nctx.stroke();
+      });
+    });
+  }
+
+  // Draw nodes
+  positions.forEach((layer,li)=>{
+    layer.forEach(n=>{
+      let r=5;
+      let g=nctx.createRadialGradient(n.x,n.y,0,n.x,n.y,r);
+      let c = li===positions.length-1?'255,0,60':'0,240,255';
+      g.addColorStop(0,`rgba(${c},${0.5+n.a*0.5})`);
+      g.addColorStop(1,`rgba(${c},0.05)`);
+      nctx.beginPath();nctx.arc(n.x,n.y,r,0,Math.PI*2);
+      nctx.fillStyle=g;nctx.fill();
+      nctx.beginPath();nctx.arc(n.x,n.y,r,0,Math.PI*2);
+      nctx.strokeStyle=`rgba(${c},${0.3+n.a*0.5})`;nctx.lineWidth=0.8;nctx.stroke();
+    });
+  });
+
+  // Layer labels
+  const lbls=['INPUT','HIDDEN','HIDDEN','HIDDEN','OUTPUT'];
+  positions.forEach((layer,li)=>{
+    nctx.font='7px Orbitron,monospace';
+    nctx.fillStyle='rgba(0,240,255,0.25)';
+    nctx.textAlign='center';
+    nctx.fillText(lbls[li]||'', layer[0].x, 10);
+  });
+}
+
+// ============================================================
+// ANIMATION LOOP
+// ============================================================
+function animateAll(){
+  t += 0.016;
+  activationT += 0.04;
+
+  // ML: propagate activation wave through neural net
+  layers.forEach((count,li)=>{
+    for(let ni=0;ni<count;ni++){
+      nodeActivations[li][ni] = Math.max(0,Math.sin(activationT - li*0.8 + ni*0.4));
+    }
+  });
+
+  // ML Blink simulation — random blink timing
+  mlState.blinkT += 0.016;
+  if(mlState.blinkT > 3.5 + Math.random()*2 && mlState.blinkOpen>=1){
+    mlState.blinkT=0;
+  }
+  if(mlState.blinkT < 0.12){
+    mlState.blinkOpen = Math.max(0,1-mlState.blinkT/0.06);
+  } else if(mlState.blinkT < 0.24){
+    mlState.blinkOpen = Math.min(1,(mlState.blinkT-0.12)/0.12);
+  } else {
+    mlState.blinkOpen=1;
+  }
+
+  // ML: Eye tracking — follows cursor/wanders
+  mlState.eyeX = lerp(mlState.eyeX, mlState.eyeTargetX, 0.06);
+  mlState.eyeY = lerp(mlState.eyeY, mlState.eyeTargetY, 0.06);
+  if(Math.random()<0.005){
+    mlState.eyeTargetX=(Math.random()-0.5)*6;
+    mlState.eyeTargetY=(Math.random()-0.5)*4;
+  }
+
+  // ML: mouth speaking animation
+  mlState.mouthOpen = lerp(mlState.mouthOpen, mlState.mouthTarget, 0.18);
+  if(mlState.speaking){
+    if(Math.random()<0.12) mlState.mouthTarget = currentEmotion.mouth*(0.5+Math.random()*0.8);
+  } else {
+    mlState.mouthTarget = currentEmotion.mouth*0.3;
+  }
+
+  // ML: Emotion rotation
+  mlState.emotionTimer += 0.016;
+  if(mlState.emotionTimer > 6){
+    mlState.emotionTimer=0;
+    let idx = Math.floor(Math.random()*emotions.length);
+    currentEmotion = emotions[idx];
+    document.getElementById('emotionTag').textContent = currentEmotion.emoji+' '+currentEmotion.name.toUpperCase();
+    document.getElementById('emotionState').textContent = currentEmotion.name.toUpperCase();
+  }
+
+  // ML: Animate bars
+  let bars=[
+    {id:'b1',vid:'v1',min:80,max:99,color:'#00f0ff'},
+    {id:'b2',vid:'v2',min:60,max:95,color:'#00ff88'},
+    {id:'b3',vid:'v3',min:70,max:98,color:'#ff003c'},
+    {id:'b4',vid:'v4',min:45,max:80,color:'#ff9900'},
+    {id:'b5',vid:'v5',min:55,max:90,color:'#aa00ff'},
+  ];
+  if(Math.random()<0.05){
+    bars.forEach(b=>{
+      let val = Math.round(b.min+Math.random()*(b.max-b.min));
+      let el=document.getElementById(b.id);
+      let vel=document.getElementById(b.vid);
+      if(el){el.style.width=val+'%';}
+      if(vel){vel.textContent=val+'%';}
+    });
+    document.getElementById('aiConf').textContent=(94+Math.random()*5).toFixed(1)+'%';
+    document.getElementById('tokensPS').textContent=Math.round(100+Math.random()*80);
+    document.getElementById('pitchVal').textContent=Math.round(200+Math.random()*60)+' Hz';
+  }
+
+  drawAvatar();
+  drawNeural();
+  requestAnimationFrame(animateAll);
+}
+animateAll();
+
+// Mouse tracking for eye follow
+ac.addEventListener('mousemove',function(e){
+  let r=ac.getBoundingClientRect();
+  let mx=(e.clientX-r.left-90)/90;
+  let my=(e.clientY-r.top-90)/90;
+  mlState.eyeTargetX=mx*5;
+  mlState.eyeTargetY=my*3;
+});
+
+// ============================================================
+// CHAT LOGIC
+// ============================================================
+const responses={
+  chrome:"Chrome ab open ho raha hai! Intent confidence: 98.2% ✅",
+  youtube:"YouTube launch! ML model ne command detect kiya. 🎬",
+  vscode:"VS Code open ho raha hai — happy coding! 💻",
+  music:"Music player start! Sentiment: HAPPY detected 🎵",
+  shutdown:"Shutdown request received. 30 sec mein system band hoga. ⚠️",
+  ml:"Machine Learning ek AI technique hai jisme computer data se khud seekhta hai! Algorithms jaise Neural Networks, SVM, Random Forest use hote hain. 🧠",
+  ai:"Main OpenAI GPT-powered AI hoon! Main natural language understand karti hoon aur aapke commands execute karti hoon. ⚡",
+  default:"Samajh gaya! ML model process kar raha hai... confidence: 96.1% ✨"
+};
+
+let chatLog=document.getElementById('chat-log');
+let statusMsg=document.getElementById('status-msg');
+
+function addMsg(text,who){
+  let d=document.createElement('div');d.className='msg msg-'+who;
+  d.innerHTML='<div class="msg-label">'+(who==='sona'?'SONA':'USER')+'</div><div class="msg-text">'+text+'</div>';
+  chatLog.appendChild(d);chatLog.scrollTop=chatLog.scrollHeight;
+}
+function addTyping(){
+  let d=document.createElement('div');d.className='msg msg-sona';d.id='typing-msg';
+  d.innerHTML='<div class="msg-label">SONA</div><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+  chatLog.appendChild(d);chatLog.scrollTop=chatLog.scrollHeight;
+}
+function removeTyping(){let t2=document.getElementById('typing-msg');if(t2)t2.remove();}
+function getResponse(cmd){
+  let c=cmd.toLowerCase();
+  if(c.includes('chrome'))return responses.chrome;
+  if(c.includes('youtube'))return responses.youtube;
+  if(c.includes('vs code')||c.includes('vscode'))return responses.vscode;
+  if(c.includes('music'))return responses.music;
+  if(c.includes('shutdown'))return responses.shutdown;
+  if(c.includes('machine learning')||c.includes('ml'))return responses.ml;
+  if(c.includes('what is ai')||c.includes('artificial'))return responses.ai;
+  return responses.default;
+}
+function sendMessage(){
+  let inp=document.getElementById('user-input');
+  let text=inp.value.trim();if(!text)return;
+  inp.value='';
+  window.parent.postMessage({type:'user_msg', text:text},'*');
+}
+window.addEventListener('message',function(e){
+  if(e.data.type==='user_msg'){
+    addMsg(e.data.text,'user');
+    statusMsg.textContent='PROCESSING...';
+    mlState.speaking=true;
+    currentEmotion=emotions[2];
+    document.getElementById('emotionTag').textContent='🤔 THINKING';
+    addTyping();
+  }
+  if(e.data.type==='sona_reply'){
+    removeTyping();
+    addMsg(e.data.text,'sona');
+    statusMsg.textContent='STANDBY';
+    mlState.speaking=false;
+    currentEmotion=emotions[1];
+    document.getElementById('emotionTag').textContent='😊 HAPPY';
+    setTimeout(()=>{currentEmotion=emotions[0];document.getElementById('emotionTag').textContent='😐 NEUTRAL';},3000);
+  }
+}
+);
+function quickCmd(cmd){document.getElementById('user-input').value=cmd;sendMessage();}
+let micActive=false;
+function toggleMic(){
+  micActive=!micActive;
+  let btn=document.getElementById('mic-btn');
+  let label=document.getElementById('mic-label');
+  let wv=document.getElementById('waveform');
+  let rings=[document.getElementById('r1'),document.getElementById('r2'),document.getElementById('r3')];
+  if(micActive){
+    btn.classList.add('listening');label.textContent='LISTENING... SAY "SONA" + COMMAND';
+    wv.classList.remove('idle');rings.forEach(r=>r.classList.add('active'));
+    statusMsg.textContent='LISTENING';
+    setTimeout(()=>{if(micActive)toggleMic();},4000);
+  } else {
+    btn.classList.remove('listening');label.textContent='TAP TO SPEAK — WAKE WORD: "SONA"';
+    wv.classList.add('idle');rings.forEach(r=>r.classList.remove('active'));
+    statusMsg.textContent='STANDBY';
+  }
+}
+document.getElementById('user-input').addEventListener('keydown',e=>{if(e.key==='Enter')sendMessage();});
+</script>
+</body>
+</html>
