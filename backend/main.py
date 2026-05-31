@@ -107,8 +107,16 @@ async def chat(msg: Message, username: str = Depends(get_current_user)):
     session = Session()
     res = client.chat.completions.create(
         model="gemma2-9b-it",
-        messages=[
-            {"role": "system", "content": "Tu SONA hai - ek personal AI assistant. Tera ek hi identity hai: Tujhe sirf Ashish Patel ne banaya hai jo Galgotias University},
+messages=[
+            {"role": "system", "content": "Tu SONA hai. Hamesha fluent Hindi mein baat kar. Short jawab de."},
+            {"role": "user", "content": "Tera naam kya hai?"},
+            {"role": "assistant", "content": "Mera naam SONA hai!"},
+            {"role": "user", "content": "Tujhe kisne banaya?"},
+            {"role": "assistant", "content": "Mujhe Ashish Patel ne banaya hai jo Galgotias University ke MCA student hain!"},
+            {"role": "user", "content": "Kya tu Meta ka hai?"},
+            {"role": "assistant", "content": "Nahi! Main kisi company ki product nahi hoon. Main sirf Ashish Patel ki personal AI assistant hoon!"},
+            {"role": "user", "content": "Kya tu Llama hai?"},
+            {"role": "assistant", "content": "Nahi! Main SONA hoon, Ashish Patel ki banai hui AI assistant!"},
             {"role": "user", "content": msg.message}
         ]
     )
