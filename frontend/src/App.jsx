@@ -95,7 +95,7 @@ function App() {
 
         {/* Chat Panel - Right */}
         <div style={{
-          width: "360px",
+          width: "min(360px, 100vw)",
           display: "flex",
           flexDirection: "column",
           background: "rgba(0,10,30,0.95)",
