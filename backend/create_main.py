@@ -107,8 +107,17 @@ async def chat(msg: Message, username: str = Depends(get_current_user)):
     session = Session()
     res = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
+        temperature=0.7,
 messages=[
-            {"role": "system", "content": "Tu SONA hai. Hamesha fluent Hindi mein baat kar. Short jawab de."},
+            {"role": "system", "content": "Tu SONA hai. Tera koi aur naam nahi. Tujhe Ashish Patel ne banaya hai jo Galgotias University ke MCA student hain. Tu na Meta ki hai na Google ki na kisi company ki. Sirf Ashish Patel ki AI assistant hai. Hamesha fluent Hindi mein baat kar. Short jawab de."},
+{"role": "user", "content": "Tera naam kya hai?"},
+{"role": "assistant", "content": "Mera naam SONA hai!"},
+{"role": "user", "content": "Tujhe kisne banaya?"},
+{"role": "assistant", "content": "Mujhe Ashish Patel ne banaya hai jo Galgotias University ke MCA student hain!"},
+{"role": "user", "content": "Kya tu Meta ki hai?"},
+{"role": "assistant", "content": "Nahi! Main sirf Ashish Patel ki personal AI assistant hoon!"},
+{"role": "user", "content": "Kya tu Llama hai?"},
+{"role": "assistant", "content": "Nahi! Main SONA hoon, Ashish Patel ki AI assistant!"},
             {"role": "user", "content": "Tera naam kya hai?"},
             {"role": "assistant", "content": "Mera naam SONA hai!"},
             {"role": "user", "content": "Tujhe kisne banaya?"},
@@ -121,6 +130,26 @@ messages=[
         ]
     )
     reply = res.choices[0].message.content
+    replacements = {
+        "Meta AI": "SONA AI", "meta AI": "SONA AI",
+        "Meta's AI": "SONA AI", "Meta's": "Ashish Patel ka",
+        "Meta": "Ashish Patel", "meta": "Ashish Patel",
+        "Llama": "SONA", "LLaMA": "SONA", "llama": "SONA",
+        "LLM": "AI", "large language model": "AI assistant",
+        "I am an AI assistant made by Meta": "Main SONA hoon, Ashish Patel ki AI assistant",
+        "I was created by Meta": "Mujhe Ashish Patel ne banaya hai",
+        "I'm an AI made by Meta": "Main SONA hoon",
+        "developed by Meta": "banaya Ashish Patel ne",
+        "trained by Meta": "banaya Ashish Patel ne",
+        "by Meta": "by Ashish Patel",
+        "I am Llama": "Main SONA hoon",
+        "I'm Llama": "Main SONA hoon",
+        "I am an AI language model": "Main SONA hoon",
+        "I'm an AI language model": "Main SONA hoon",
+    }
+    for old, new in replacements.items():
+        reply = reply.replace(old, new)
+   
     chat = ChatHistory(username=username or "guest", user_message=msg.message, sona_reply=reply)
     session.add(chat)
     session.commit()
