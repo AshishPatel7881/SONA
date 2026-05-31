@@ -32,7 +32,7 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 SECRET_KEY = os.getenv("SECRET_KEY", "sona-secret-key-2024")
 security = HTTPBearer(auto_error=False)
 
-engine = create_engine("sqlite:///sona_chat.db")
+engine = create_engine("sqlite:////tmp/sona_chat.db")
 Base = declarative_base()
 
 class User(Base):
