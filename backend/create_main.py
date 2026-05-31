@@ -1,6 +1,6 @@
 code = '''from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from groq import Groq
@@ -10,17 +10,26 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from jose import jwt
-from passlib.context import CryptContext
+import hashlib
 import os
 import uuid
 from datetime import datetime, timedelta
 
 load_dotenv()
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+@app.middleware("http")
+async def add_cors_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
+
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
+
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 SECRET_KEY = os.getenv("SECRET_KEY", "sona-secret-key-2024")
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)
 
 engine = create_engine("sqlite:///sona_chat.db")
@@ -50,8 +59,11 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
 def create_token(username):
-    return jwt.encode({"sub": username, "exp": datetime.utcnow() + timedelta(days=7)}, SECRET_KEY)
+    return jwt.encode({"sub": username, "exp": datetime.utcnow() + timedelta(days=7)}, SECRET_KEY, algorithm="HS256")
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     if not credentials:
@@ -66,14 +78,17 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
 def root():
     return {"status": "SONA AI chal raha hai!"}
 
+@app.options("/{path:path}")
+async def options_handler(path: str):
+    return Response(headers={"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "*", "Access-Control-Allow-Headers": "*"})
+
 @app.post("/register")
 def register(user: UserLogin):
     session = Session()
     if session.query(User).filter_by(username=user.username).first():
         session.close()
         raise HTTPException(status_code=400, detail="User already exists!")
-    hashed = pwd_context.hash(user.password)
-    session.add(User(username=user.username, password=hashed))
+    session.add(User(username=user.username, password=hash_password(user.password)))
     session.commit()
     session.close()
     return {"token": create_token(user.username), "username": user.username}
@@ -83,7 +98,7 @@ def login(user: UserLogin):
     session = Session()
     db_user = session.query(User).filter_by(username=user.username).first()
     session.close()
-    if not db_user or not pwd_context.verify(user.password, db_user.password):
+    if not db_user or db_user.password != hash_password(user.password):
         raise HTTPException(status_code=401, detail="Galat username ya password!")
     return {"token": create_token(user.username), "username": user.username}
 
