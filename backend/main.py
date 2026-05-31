@@ -72,7 +72,7 @@ def register(user: UserLogin):
     if session.query(User).filter_by(username=user.username).first():
         session.close()
         raise HTTPException(status_code=400, detail="User already exists!")
-    hashed = pwd_context.hash(user.password)
+    hashed = pwd_context.hash(user.password[:72])
     session.add(User(username=user.username, password=hashed))
     session.commit()
     session.close()
