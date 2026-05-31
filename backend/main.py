@@ -16,23 +16,13 @@ import uuid
 from datetime import datetime, timedelta
 
 load_dotenv()
-
 app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-SECRET_KEY = os.getenv("SECRET_KEY", "sona-secret-key-ashish-patel-2024")
+SECRET_KEY = os.getenv("SECRET_KEY", "sona-secret-key-2024")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)
 
-# Database
 engine = create_engine("sqlite:///sona_chat.db")
 Base = declarative_base()
 
@@ -60,7 +50,7 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
-def create_token(username: str):
+def create_token(username):
     return jwt.encode({"sub": username, "exp": datetime.utcnow() + timedelta(days=7)}, SECRET_KEY)
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -103,6 +93,28 @@ async def chat(msg: Message, username: str = Depends(get_current_user)):
     res = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
-            {"role": "system", "content": "Tu SONA hai. Ashish Patel ne banaya hai tujhe. Bas itna yaad rakh."},
-            {"role": "assistant", "content": "Haan! Main SONA hoon, Ashish Patel ki personal AI assistant!"},
-            {"role": "user", "content": "Kisn
+            {"role": "system", "content": "Tu SONA hai. Ashish Patel ne banaya hai. Short Hinglish mein baat kar."},
+            {"role": "user", "content": msg.message}
+        ]
+    )
+    reply = res.choices[0].message.content
+    chat = ChatHistory(username=username or "guest", user_message=msg.message, sona_reply=reply)
+    session.add(chat)
+    session.commit()
+    session.close()
+    filename = f"audio_{uuid.uuid4().hex}.mp3"
+    os.makedirs("audio", exist_ok=True)
+    tts = gTTS(text=reply, lang="hi", slow=False)
+    tts.save(f"audio/{filename}")
+    return {"reply": reply, "audio": f"/audio/{filename}"}
+
+@app.get("/history")
+def get_history(username: str = Depends(get_current_user)):
+    session = Session()
+    chats = session.query(ChatHistory).filter_by(username=username or "guest").order_by(ChatHistory.timestamp.desc()).limit(50).all()
+    session.close()
+    return [{"user": c.user_message, "sona": c.sona_reply, "time": str(c.timestamp)} for c in chats]
+
+@app.get("/audio/{filename}")
+def get_audio(filename: str):
+    return FileResponse(f"audio/{filename}", media_type="audio/mpeg")
