@@ -106,9 +106,9 @@ def login(user: UserLogin):
 async def chat(msg: Message, username: str = Depends(get_current_user)):
     session = Session()
     res = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="gemma2-9b-it",
         messages=[
-            {"role": "system", "content": "Tu SONA hai. Ashish Patel ne banaya hai. Short Hinglish mein baat kar."},
+            {"role": "system", "content": "Tu SONA hai - ek personal AI assistant. Tera ek hi identity hai: Tujhe sirf Ashish Patel ne banaya hai jo Galgotias University},
             {"role": "user", "content": msg.message}
         ]
     )
